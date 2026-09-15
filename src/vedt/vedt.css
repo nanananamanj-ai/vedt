@@ -197,7 +197,8 @@ body.locked{overflow:hidden}
 }
 
 @media(max-width:899px){
-  .hero{padding-top:calc(var(--hdr) + 6vh)}
+  main{padding-top:var(--hdr)}
+  .hero{display:none}
   #start{display:none}
   .marquee{display:none}
   .grid{gap:2px}
