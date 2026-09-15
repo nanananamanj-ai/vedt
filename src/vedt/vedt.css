@@ -158,3 +158,50 @@ footer{border-top:1px solid var(--line);padding:26px 16px 40px}
 .lb-x{position:absolute;top:10px;right:10px;z-index:5;width:38px;height:38px;border-radius:50%;border:1px solid var(--line2);background:rgba(11,12,10,.8);color:var(--ink);font-family:var(--mono);font-size:20px;line-height:1;cursor:pointer}
 .lb-x:hover{color:var(--acc);border-color:var(--acc)}
 body.locked{overflow:hidden}
+
+/* ---------- indexed portfolio layout ---------- */
+@media(min-width:900px){
+  :root{--rail:286px;--hdr:0px}
+  .hdr{inset:0 auto 0 0;width:var(--rail);background:var(--bg);border:0;border-right:1px solid var(--line);backdrop-filter:none;-webkit-backdrop-filter:none;padding:42px 34px;display:flex;flex-direction:column;align-items:stretch}
+  .hdr-in{display:block;padding:0}
+  .brand{display:block;margin-bottom:48px}
+  .brand img{height:auto;width:150px}
+  .hdr-cta{display:none}
+  .nav{display:flex;flex-direction:column;align-items:flex-start;gap:3px;overflow:visible;padding:0}
+  .nav a{font-family:var(--sans);font-size:16px;letter-spacing:0;text-transform:none;color:var(--mut);padding:2px 0;border:0;line-height:1.45}
+  .nav a:first-child{margin-bottom:10px;color:var(--ink);font-style:italic}
+  .nav a.on,.nav a:hover{color:var(--acc);border:0}
+  main,footer{margin-left:var(--rail)}
+  .hero,.marquee,#start{display:none}
+  section{scroll-margin-top:24px}
+  .wrap{max-width:none;padding:0}
+  main>section:not(.contact){padding:0 0 62px}
+  main>section:not(.contact):first-of-type{padding-top:0}
+  .sec-head{padding:38px 26px 18px;align-items:baseline;border-top:1px solid var(--line)}
+  #brands .sec-head{border-top:0}
+  .sec-head h2{font-size:32px;letter-spacing:0}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px}
+  .thumb{border:0;border-radius:0;aspect-ratio:4/3}
+  .thumb img{filter:saturate(.94) contrast(1.03);transform:scale(1.002)}
+  .card:hover .thumb img{transform:scale(1.035)}
+  .thumb::after{background:linear-gradient(180deg,transparent 45%,rgba(11,12,10,.88));opacity:0;transition:opacity .25s}
+  .card:hover .thumb::after,.card:focus-visible .thumb::after{opacity:1}
+  .badge{opacity:0;transition:opacity .2s}
+  .card:hover .badge,.card:focus-visible .badge{opacity:1}
+  .play{width:46px;height:46px}
+  .cap{position:absolute;z-index:3;left:18px;right:18px;bottom:15px;margin:0;color:var(--mut);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none}
+  .card:hover .cap,.card:focus-visible .cap{opacity:1;transform:none}
+  .contact{margin-top:0}
+  .contact .wrap{padding:84px 30px}
+  footer{padding-left:30px;padding-right:30px}
+}
+
+@media(max-width:899px){
+  main{padding-top:var(--hdr)}
+  .hero{display:none}
+  #start{display:none}
+  .marquee{display:none}
+  .grid{gap:2px}
+  .thumb{border-radius:0}
+  .sec-head{padding-top:42px}
+}
