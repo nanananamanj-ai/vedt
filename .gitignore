@@ -20,6 +20,13 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Environment variables — never commit real credentials.
+# .env was committed in 86f42ff; only client-safe keys were in it, but this
+# prevents a future sb_secret_ / service_role key from ever being pushed.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

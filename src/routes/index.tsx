@@ -1,43 +1,102 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
 
 import vedtCss from "../vedt/vedt.css?url";
-import bodyHtml from "../vedt/body.html?raw";
-import initScript from "../vedt/vedt-init.js?raw";
+import { VIDEOS, SECTIONS } from "../vedt/data";
+import { loadVideos } from "../vedt/db";
+import { VideoCard } from "../vedt/VideoCard";
+import { Header, Rail, Marquee, Preloader, RenderBar, Outro } from "../vedt/ui";
 
-const TITLE =
-  "V-EDT — Freelance Video Editing Studio · Reels, Weddings, Brands, Podcasts";
+const TITLE = "V-EDT — Video / Film Editing House for Filmmakers & Elite Production Houses";
 const DESCRIPTION =
-  "V-EDT is a two-person freelance video editing studio cutting reels, weddings, brand content, events, podcasts, travel and music videos. Watch the work inline.";
+  "Problem-solving edits for filmmakers and elite production houses. Reels, weddings, brands, events, podcasts, travel and music — story, rhythm and grade under one roof.";
+const FONTS =
+  "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..600&display=swap";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: TITLE },
       { name: "description", content: DESCRIPTION },
-      { name: "theme-color", content: "#0B0C0A" },
-      { property: "og:title", content: "V-EDT — Freelance Video Editing Studio" },
+      { name: "theme-color", content: "#EDF2F3" },
+      { property: "og:title", content: "V-EDT — Video / Film Editing House" },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "V-EDT — Freelance Video Editing Studio" },
-      { name: "twitter:description", content: DESCRIPTION },
     ],
-    links: [{ rel: "stylesheet", href: vedtCss }],
+    links: [
+      { rel: "stylesheet", href: vedtCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+      { rel: "stylesheet", href: FONTS },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
   }),
+  loader: () => loadVideos(),
   component: Index,
 });
 
 function Index() {
-  useEffect(() => {
-    document.body.id = "top";
-    const el = document.createElement("script");
-    el.textContent = initScript;
-    document.body.appendChild(el);
-    return () => {
-      el.remove();
-    };
-  }, []);
+  const videos = Route.useLoaderData() ?? VIDEOS;
+  const featured = videos.filter((v) => v.featured || v.section === "start");
 
-  return <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />;
+  return (
+    <>
+      <Preloader />
+      <Header />
+      <Rail />
+      <main>
+        <section className="hero" aria-label="Intro">
+          <p className="mono kicker">Video / Film Editing House</p>
+          <h1 className="disp">Cuts that solve the story.</h1>
+        </section>
+
+        <Marquee />
+
+        <section id="start" aria-label="Featured work">
+          <div className="strip">
+            {featured.map((v) => (
+              <VideoCard key={`s${v.position}`} v={v} />
+            ))}
+          </div>
+        </section>
+
+        {SECTIONS.map((sec) => {
+          const list = videos.filter((v) => v.section === sec.id);
+          return (
+            <section id={sec.id} key={sec.id} aria-label={sec.label}>
+              <div className="wrap">
+                <div className="sec-head">
+                  <h2 className="disp">{sec.label}</h2>
+                  <span className="rule" />
+                </div>
+                {"subs" in sec && sec.subs ? (
+                  sec.subs.map((sub) => (
+                    <div key={sub}>
+                      <p className="mono subhead">{sub}s</p>
+                      <div className="grid">
+                        {list
+                          .filter((v) => v.sub === sub)
+                          .map((v) => (
+                            <VideoCard key={`${sec.id}-${sub}-${v.position}`} v={v} />
+                          ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid">
+                    {list.map((v) => (
+                      <VideoCard key={`${sec.id}-${v.position}`} v={v} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+
+        <Outro />
+      </main>
+      <RenderBar />
+    </>
+  );
 }
