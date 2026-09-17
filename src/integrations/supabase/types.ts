@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          position: number
+          slug: string
+          subs: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          position?: number
+          slug: string
+          subs?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          position?: number
+          slug?: string
+          subs?: string[]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -37,8 +64,9 @@ export type Database = {
           aspect: string
           code: string
           created_at: string
-          detail: string
+          detail: string | null
           featured: boolean
+          file_path: string | null
           id: string
           kind: string
           link: string
@@ -51,10 +79,11 @@ export type Database = {
         }
         Insert: {
           aspect?: string
-          code: string
+          code?: string
           created_at?: string
-          detail?: string
+          detail?: string | null
           featured?: boolean
+          file_path?: string | null
           id?: string
           kind?: string
           link?: string
@@ -69,8 +98,9 @@ export type Database = {
           aspect?: string
           code?: string
           created_at?: string
-          detail?: string
+          detail?: string | null
           featured?: boolean
+          file_path?: string | null
           id?: string
           kind?: string
           link?: string
@@ -95,6 +125,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
