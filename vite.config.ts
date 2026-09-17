@@ -12,4 +12,12 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      // Vite 6+ rejects requests whose Host header is not on this list. Needed so
+      // sandboxed preview proxies (*.e2b.app) can reach the dev server. The leading
+      // dot matches every subdomain, so it survives sandbox ID changes.
+      allowedHosts: [".e2b.app"],
+    },
+  },
 });

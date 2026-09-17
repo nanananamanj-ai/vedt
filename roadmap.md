@@ -1,19 +1,20 @@
 # V-EDT overhaul roadmap
 
-- [ ] Light luxury cyan-blue theme (default) + dark theme toggle, persisted
-- [ ] Neue Haas-style body font (keep Sockard as display only — 2 fonts total)
-- [ ] Remove 01/02 numbering and film counts from category heads
-- [ ] Left rail: niches only (remove WORK), hover = italic + accent on all links
-- [ ] New tagline (filmmakers / elite production houses, problem-solving)
-- [ ] Mixed vertical/horizontal elegant grid (orientation-aware spans)
-- [ ] Card hover: dim + centered ALL-CAPS one-liner under title; grey fade-in play button (no green pop)
-- [ ] Inline in-frame playback (no dialog) + fullscreen button bottom-right
-- [ ] Reel thumbnails crop fix (square IG thumbs look bad)
-- [ ] Preloader: V-EDT centered, flies to top-left on first scroll
-- [ ] DaVinci-style "rendering" bar at bottom pre-scroll
-- [ ] Giant half-cut V-EDT wordmark at page bottom (awaiting ref image — wordmark for now)
-- [ ] Contact → separate /contact page (minimal: WhatsApp, phone, email)
-- [ ] Footer: "© V-EDT · VIDEO / FILM EDITING HOUSE"; remove "Tell us what you're making" line
-- [ ] Weddings sub-categories: Teasers / Highlights / Reels
-- [ ] Admin panel (Lovable Cloud): auth + videos table + CRUD; homepage renders from DB
-- [ ] Mobile friendliness pass
+- [x] Light luxury cyan-blue theme (default) + dark theme toggle, persisted
+- [x] Neue Haas-style body font (keep Sockard as display only — 2 fonts total; Inter as the Neue Haas-style body face)
+- [x] Remove 01/02 numbering and film counts from category heads
+- [x] Left rail: niches only (remove WORK), hover = italic + accent on all links
+- [x] New tagline (filmmakers / elite production houses, problem-solving)
+- [x] Mixed vertical/horizontal elegant grid (orientation-aware spans)
+- [x] Card hover: dim + centered ALL-CAPS one-liner under title; grey fade-in play button (no green pop)
+- [x] Inline in-frame playback (no dialog) + fullscreen button bottom-right
+- [x] Reel thumbnails crop fix (orientation-aware aspect containers, object-fit cover)
+- [x] Preloader: V-EDT centered, flies to top-left on first scroll
+- [x] DaVinci-style "rendering" bar at bottom tied to scroll
+- [x] Giant half-cut V-EDT wordmark at page bottom
+- [x] Contact → separate /contact page (minimal: WhatsApp, phone, email)
+- [x] Footer: "© V-EDT · VIDEO / FILM EDITING HOUSE"; removed "Tell us what you're making" line
+- [x] Weddings sub-categories: Teasers / Highlights / Reels
+- [x] Admin panel (/admin): auth + videos table + CRUD; homepage renders from DB (static fallback)
+- [ ] Mobile friendliness pass (baseline responsive done; needs on-device polish)
+- [ ] Housekeeping: remove package-lock.json once Bun is available; rotate any keys if ever leaked
