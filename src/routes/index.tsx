@@ -73,21 +73,11 @@ function Index() {
                   sec.subs.map((sub) => (
                     <div key={sub}>
                       <p className="mono subhead">{sub}s</p>
-                      <div className="grid">
-                        {list
-                          .filter((v) => v.sub === sub)
-                          .map((v) => (
-                            <VideoCard key={`${sec.id}-${sub}-${v.position}`} v={v} />
-                          ))}
-                      </div>
+                      <Rows id={`${sec.id}-${sub}`} list={list.filter((v) => v.sub === sub)} />
                     </div>
                   ))
                 ) : (
-                  <div className="grid">
-                    {list.map((v) => (
-                      <VideoCard key={`${sec.id}-${v.position}`} v={v} />
-                    ))}
-                  </div>
+                  <Rows id={sec.id} list={list} />
                 )}
               </div>
             </section>
