@@ -16,5 +16,8 @@
 - [x] Footer: "© V-EDT · VIDEO / FILM EDITING HOUSE"; removed "Tell us what you're making" line
 - [x] Weddings sub-categories: Teasers / Highlights / Reels
 - [x] Admin panel (/admin): auth + videos table + CRUD; homepage renders from DB (static fallback)
+- [x] Hide video sources: no badges/links/descriptions, inline play, fullscreen corner button
+- [x] Uniform tiles split into wide rows and vertical rows per category
+- [x] Admin: video file upload to private storage + reorder (↑/↓)
 - [ ] Mobile friendliness pass (baseline responsive done; needs on-device polish)
 - [ ] Housekeeping: remove package-lock.json once Bun is available; rotate any keys if ever leaked

@@ -23,6 +23,7 @@ type EditorState = {
   link: string;
   featured: boolean;
   position: number;
+  file_path: string;
 };
 
 const blank = (position: number): EditorState => ({
@@ -39,6 +40,7 @@ const blank = (position: number): EditorState => ({
   link: "",
   featured: false,
   position,
+  file_path: "",
 });
 
 export const Route = createFileRoute("/admin")({
@@ -98,6 +100,7 @@ function Admin() {
       link: editor.link,
       featured: editor.featured,
       position: editor.position,
+      file_path: editor.file_path.trim() === "" ? null : editor.file_path.trim(),
     };
     const q = editor.id
       ? supabase.from("videos").update(payload).eq("id", editor.id)
@@ -124,6 +127,32 @@ function Admin() {
     );
     await load();
   };
+
+  // Move a row up or down by swapping positions with its neighbour.
+  const move = async (index: number, dir: -1 | 1) => {
+    const a = rows[index];
+    const b = rows[index + dir];
+    if (!a || !b) return;
+    await supabase.from("videos").update({ position: b.position }).eq("id", a.id);
+    await supabase.from("videos").update({ position: a.position }).eq("id", b.id);
+    await load();
+  };
+
+  // Upload the actual video file to private storage; playback then shows no
+  // outside branding at all.
+  const upload = async (file: File) => {
+    setMsg({ text: `Uploading ${file.name}…`, err: false });
+    const path = `videos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+    const { error } = await supabase.storage.from("media").upload(path, file, { upsert: false });
+    if (error) {
+      setMsg({ text: `Upload failed: ${error.message}`, err: true });
+      return;
+    }
+    set("file_path", path);
+    setMsg({ text: "Uploaded. Save to apply.", err: false });
+  };
+
+
 
   const set = <K extends keyof EditorState>(k: K, v: EditorState[K]) =>
     setEditor((s) => (s ? { ...s, [k]: v } : s));
@@ -256,6 +285,20 @@ function Admin() {
                     External link
                     <input value={editor.link} onChange={(e) => set("link", e.target.value)} />
                   </label>
+                  <label className="mono full">
+                    Upload video file (plays with no outside branding)
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void upload(f);
+                      }}
+                    />
+                    {editor.file_path ? (
+                      <span className="msg">Stored file: {editor.file_path}</span>
+                    ) : null}
+                  </label>
                   <label className="mono">
                     Position
                     <input
@@ -296,7 +339,7 @@ function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {rows.map((r, i) => (
                     <tr key={r.id}>
                       <td>{r.position}</td>
                       <td>
@@ -307,6 +350,22 @@ function Admin() {
                       <td>{r.platform}</td>
                       <td>{r.aspect}</td>
                       <td>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => void move(i, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === rows.length - 1}
+                          onClick={() => void move(i, 1)}
+                        >
+                          ↓
+                        </button>
                         <button
                           className="rowbtn"
                           type="button"
@@ -325,6 +384,7 @@ function Admin() {
                               link: r.link,
                               featured: r.featured,
                               position: r.position,
+                              file_path: r.file_path ?? "",
                             })
                           }
                         >

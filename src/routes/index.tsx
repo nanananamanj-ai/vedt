@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
     links: [
       { rel: "stylesheet", href: vedtCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: FONTS },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
@@ -34,6 +34,31 @@ export const Route = createFileRoute("/")({
   loader: () => loadVideos(),
   component: Index,
 });
+
+/** Uniform tiles: wide films in their own rows, vertical reels in theirs. */
+function Rows({ id, list }: { id: string; list: import("../vedt/data").Video[] }) {
+  const wide = list.filter((v) => v.aspect !== "portrait");
+  const tall = list.filter((v) => v.aspect === "portrait");
+  return (
+    <>
+      {wide.length > 0 ? (
+        <div className="grid g-wide">
+          {wide.map((v) => (
+            <VideoCard key={`${id}-w-${v.position}`} v={v} />
+          ))}
+        </div>
+      ) : null}
+      {tall.length > 0 ? (
+        <div className="grid g-tall">
+          {tall.map((v) => (
+            <VideoCard key={`${id}-t-${v.position}`} v={v} />
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 
 function Index() {
   const videos = Route.useLoaderData() ?? VIDEOS;
@@ -73,21 +98,11 @@ function Index() {
                   sec.subs.map((sub) => (
                     <div key={sub}>
                       <p className="mono subhead">{sub}s</p>
-                      <div className="grid">
-                        {list
-                          .filter((v) => v.sub === sub)
-                          .map((v) => (
-                            <VideoCard key={`${sec.id}-${sub}-${v.position}`} v={v} />
-                          ))}
-                      </div>
+                      <Rows id={`${sec.id}-${sub}`} list={list.filter((v) => v.sub === sub)} />
                     </div>
                   ))
                 ) : (
-                  <div className="grid">
-                    {list.map((v) => (
-                      <VideoCard key={`${sec.id}-${v.position}`} v={v} />
-                    ))}
-                  </div>
+                  <Rows id={sec.id} list={list} />
                 )}
               </div>
             </section>

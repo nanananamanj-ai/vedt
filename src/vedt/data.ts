@@ -16,6 +16,7 @@ export interface Video {
   link: string;
   featured: boolean;
   position: number;
+  file_path?: string | null;
 }
 export const VIDEOS: Video[] = [
   {
