@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
     links: [
       { rel: "stylesheet", href: vedtCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: FONTS },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
