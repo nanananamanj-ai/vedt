@@ -339,7 +339,7 @@ function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {rows.map((r, i) => (
                     <tr key={r.id}>
                       <td>{r.position}</td>
                       <td>
@@ -350,6 +350,22 @@ function Admin() {
                       <td>{r.platform}</td>
                       <td>{r.aspect}</td>
                       <td>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => void move(i, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === rows.length - 1}
+                          onClick={() => void move(i, 1)}
+                        >
+                          ↓
+                        </button>
                         <button
                           className="rowbtn"
                           type="button"
@@ -368,6 +384,7 @@ function Admin() {
                               link: r.link,
                               featured: r.featured,
                               position: r.position,
+                              file_path: r.file_path ?? "",
                             })
                           }
                         >
