@@ -100,6 +100,7 @@ function Admin() {
       link: editor.link,
       featured: editor.featured,
       position: editor.position,
+      file_path: editor.file_path.trim() === "" ? null : editor.file_path.trim(),
     };
     const q = editor.id
       ? supabase.from("videos").update(payload).eq("id", editor.id)
@@ -126,6 +127,32 @@ function Admin() {
     );
     await load();
   };
+
+  // Move a row up or down by swapping positions with its neighbour.
+  const move = async (index: number, dir: -1 | 1) => {
+    const a = rows[index];
+    const b = rows[index + dir];
+    if (!a || !b) return;
+    await supabase.from("videos").update({ position: b.position }).eq("id", a.id);
+    await supabase.from("videos").update({ position: a.position }).eq("id", b.id);
+    await load();
+  };
+
+  // Upload the actual video file to private storage; playback then shows no
+  // outside branding at all.
+  const upload = async (file: File) => {
+    setMsg({ text: `Uploading ${file.name}…`, err: false });
+    const path = `videos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+    const { error } = await supabase.storage.from("media").upload(path, file, { upsert: false });
+    if (error) {
+      setMsg({ text: `Upload failed: ${error.message}`, err: true });
+      return;
+    }
+    set("file_path", path);
+    setMsg({ text: "Uploaded. Save to apply.", err: false });
+  };
+
+
 
   const set = <K extends keyof EditorState>(k: K, v: EditorState[K]) =>
     setEditor((s) => (s ? { ...s, [k]: v } : s));
