@@ -50,7 +50,7 @@ export function VideoCard({ v }: { v: Video }) {
   return (
     <div
       ref={rootRef}
-      className="card"
+      className={`card a-${v.aspect}`}
       role="button"
       tabIndex={playing ? -1 : 0}
       onClick={() => !playing && setPlaying(true)}
