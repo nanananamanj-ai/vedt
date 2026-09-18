@@ -23,6 +23,7 @@ type EditorState = {
   link: string;
   featured: boolean;
   position: number;
+  file_path: string;
 };
 
 const blank = (position: number): EditorState => ({
@@ -39,6 +40,7 @@ const blank = (position: number): EditorState => ({
   link: "",
   featured: false,
   position,
+  file_path: "",
 });
 
 export const Route = createFileRoute("/admin")({
