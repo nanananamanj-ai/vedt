@@ -285,6 +285,20 @@ function Admin() {
                     External link
                     <input value={editor.link} onChange={(e) => set("link", e.target.value)} />
                   </label>
+                  <label className="mono full">
+                    Upload video file (plays with no outside branding)
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void upload(f);
+                      }}
+                    />
+                    {editor.file_path ? (
+                      <span className="msg">Stored file: {editor.file_path}</span>
+                    ) : null}
+                  </label>
                   <label className="mono">
                     Position
                     <input
