@@ -35,6 +35,31 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+/** Uniform tiles: wide films in their own rows, vertical reels in theirs. */
+function Rows({ id, list }: { id: string; list: import("../vedt/data").Video[] }) {
+  const wide = list.filter((v) => v.aspect !== "portrait");
+  const tall = list.filter((v) => v.aspect === "portrait");
+  return (
+    <>
+      {wide.length > 0 ? (
+        <div className="grid g-wide">
+          {wide.map((v) => (
+            <VideoCard key={`${id}-w-${v.position}`} v={v} />
+          ))}
+        </div>
+      ) : null}
+      {tall.length > 0 ? (
+        <div className="grid g-tall">
+          {tall.map((v) => (
+            <VideoCard key={`${id}-t-${v.position}`} v={v} />
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+
 function Index() {
   const videos = Route.useLoaderData() ?? VIDEOS;
   const featured = videos.filter((v) => v.featured || v.section === "start");
