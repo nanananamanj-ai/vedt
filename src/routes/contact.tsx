@@ -12,8 +12,17 @@ export const Route = createFileRoute("/contact")({
         name: "description",
         content: "Reach V-EDT on WhatsApp, phone or email. Replies within 24 hours.",
       },
+      { property: "og:title", content: "Contact — V-EDT" },
+      {
+        property: "og:description",
+        content: "Reach V-EDT on WhatsApp, phone or email. Replies within 24 hours.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://vedt.lovable.app/contact" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
+      { rel: "canonical", href: "https://vedt.lovable.app/contact" },
       { rel: "stylesheet", href: vedtCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
