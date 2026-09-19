@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import vedtCss from "../vedt/vedt.css?url";
 import { VIDEOS, SECTIONS } from "../vedt/data";
-import { loadVideos } from "../vedt/db";
+import { loadVideos, loadSections } from "../vedt/db";
 import { VideoCard } from "../vedt/VideoCard";
 import { Header, Rail, Marquee, Preloader, RenderBar, Outro } from "../vedt/ui";
 
@@ -31,7 +31,10 @@ export const Route = createFileRoute("/")({
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
-  loader: () => loadVideos(),
+  loader: async () => {
+    const [videos, sections] = await Promise.all([loadVideos(), loadSections()]);
+    return { videos, sections };
+  },
   component: Index,
 });
 
