@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import vedtCss from "../vedt/vedt.css?url";
 import { VIDEOS, SECTIONS } from "../vedt/data";
-import { loadVideos } from "../vedt/db";
+import { loadVideos, loadSections } from "../vedt/db";
 import { VideoCard } from "../vedt/VideoCard";
 import { Header, Rail, Marquee, Preloader, RenderBar, Outro } from "../vedt/ui";
 
@@ -21,9 +21,14 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "V-EDT — Video / Film Editing House" },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://vedt.lovable.app/" },
+      { property: "og:site_name", content: "V-EDT" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "V-EDT — Video / Film Editing House" },
+      { name: "twitter:description", content: DESCRIPTION },
     ],
     links: [
+      { rel: "canonical", href: "https://vedt.lovable.app/" },
       { rel: "stylesheet", href: vedtCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -31,7 +36,10 @@ export const Route = createFileRoute("/")({
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
   }),
-  loader: () => loadVideos(),
+  loader: async () => {
+    const [videos, sections] = await Promise.all([loadVideos(), loadSections()]);
+    return { videos, sections };
+  },
   component: Index,
 });
 
@@ -61,31 +69,24 @@ function Rows({ id, list }: { id: string; list: import("../vedt/data").Video[] }
 
 
 function Index() {
-  const videos = Route.useLoaderData() ?? VIDEOS;
-  const featured = videos.filter((v) => v.featured || v.section === "start");
+  const data = Route.useLoaderData();
+  const videos = data?.videos ?? VIDEOS;
+  const sections = data?.sections ?? SECTIONS;
 
   return (
     <>
       <Preloader />
       <Header />
-      <Rail />
+      <Rail sections={sections} />
       <main>
         <section className="hero" aria-label="Intro">
           <p className="mono kicker">Video / Film Editing House</p>
           <h1 className="disp">Cuts that solve the story.</h1>
         </section>
 
-        <Marquee />
+        <Marquee sections={sections} />
 
-        <section id="start" aria-label="Featured work">
-          <div className="strip">
-            {featured.map((v) => (
-              <VideoCard key={`s${v.position}`} v={v} />
-            ))}
-          </div>
-        </section>
-
-        {SECTIONS.map((sec) => {
+        {sections.map((sec) => {
           const list = videos.filter((v) => v.section === sec.id);
           return (
             <section id={sec.id} key={sec.id} aria-label={sec.label}>

@@ -21,3 +21,6 @@
 - [x] Admin: video file upload to private storage + reorder (↑/↓)
 - [ ] Mobile friendliness pass (baseline responsive done; needs on-device polish)
 - [ ] Housekeeping: remove package-lock.json once Bun is available; rotate any keys if ever leaked
+- [ ] Remove showreel/featured strip; Travel first; admin reordering of niches
+- [ ] SEO pass + sitemap.xml + robots.txt polish
+- [ ] Simplify admin "add video" form (paste link → auto-detect platform/code/kind)

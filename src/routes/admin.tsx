@@ -9,6 +9,8 @@ import { supabase } from "../integrations/supabase/client";
 
 type Row = Video & { id: string };
 
+type Cat = { id: string; slug: string; label: string; subs: string[]; position: number };
+
 type EditorState = {
   id: string | null;
   section: string;
@@ -55,9 +57,11 @@ function Admin() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [cats, setCats] = useState<Cat[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [adv, setAdv] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
 
   const load = useCallback(async () => {
@@ -66,6 +70,11 @@ function Admin() {
       .select("*")
       .order("position", { ascending: true });
     if (data) setRows(data as unknown as Row[]);
+    const { data: cs } = await supabase
+      .from("categories")
+      .select("*")
+      .order("position", { ascending: true });
+    if (cs) setCats(cs as unknown as Cat[]);
   }, []);
 
   useEffect(() => {
@@ -138,6 +147,48 @@ function Admin() {
     await load();
   };
 
+  // Reorder niches: swap positions with the neighbouring category.
+  const moveCat = async (index: number, dir: -1 | 1) => {
+    const a = cats[index];
+    const b = cats[index + dir];
+    if (!a || !b) return;
+    await supabase.from("categories").update({ position: b.position }).eq("id", a.id);
+    await supabase.from("categories").update({ position: a.position }).eq("id", b.id);
+    await load();
+  };
+
+  const saveCat = async (c: Cat, patch: Partial<Cat>) => {
+    const { error } = await supabase.from("categories").update(patch).eq("id", c.id);
+    setMsg(
+      error
+        ? { text: `Category save failed: ${error.message}`, err: true }
+        : { text: "Category updated.", err: false },
+    );
+    await load();
+  };
+
+  const addCat = async () => {
+    const label = window.prompt("New niche name (e.g. Fashion)")?.trim();
+    if (!label) return;
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const { error } = await supabase
+      .from("categories")
+      .insert({ slug, label, subs: [], position: cats.length });
+    setMsg(
+      error
+        ? { text: `Add failed: ${error.message}`, err: true }
+        : { text: `Added ${label}.`, err: false },
+    );
+    await load();
+  };
+
+  const delCat = async (c: Cat) => {
+    if (!window.confirm(`Remove the ${c.label} niche? Videos in it stay in the database.`)) return;
+    const { error } = await supabase.from("categories").delete().eq("id", c.id);
+    if (error) setMsg({ text: `Delete failed: ${error.message}`, err: true });
+    await load();
+  };
+
   // Upload the actual video file to private storage; playback then shows no
   // outside branding at all.
   const upload = async (file: File) => {
@@ -156,6 +207,30 @@ function Admin() {
 
   const set = <K extends keyof EditorState>(k: K, v: EditorState[K]) =>
     setEditor((s) => (s ? { ...s, [k]: v } : s));
+
+  // Sub-groups offered for the currently selected niche.
+  const subOptions: string[] =
+    cats.find((c) => c.slug === editor?.section)?.subs ??
+    SECTIONS.find((s) => s.id === editor?.section)?.subs ??
+    [];
+
+  // Paste a link → work out platform, id and kind so the admin types less.
+  const applyLink = (raw: string) => {
+    const link = raw.trim();
+    let patch: Partial<EditorState> = { link };
+    const yt =
+      link.match(/youtu\.be\/([\w-]+)/) ??
+      link.match(/youtube\.com\/(?:watch\?v=|embed\/)([\w-]+)/) ??
+      null;
+    const shorts = link.match(/youtube\.com\/shorts\/([\w-]+)/);
+    const ig = link.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/);
+    const vm = link.match(/vimeo\.com\/(\d+)/);
+    if (shorts) patch = { ...patch, platform: "youtube", code: shorts[1]!, kind: "shorts" };
+    else if (yt) patch = { ...patch, platform: "youtube", code: yt[1]!, kind: "watch" };
+    else if (ig) patch = { ...patch, platform: "instagram", code: ig[2]!, kind: ig[1]! };
+    else if (vm) patch = { ...patch, platform: "vimeo", code: vm[1]!, kind: "video" };
+    setEditor((s) => (s ? { ...s, ...patch } : s));
+  };
 
   return (
     <>
@@ -206,6 +281,84 @@ function Admin() {
                 </button>
               </p>
 
+              <h2 className="disp" style={{ marginTop: 18 }}>
+                Niches
+              </h2>
+              <p className="note">
+                Drag-free ordering: use ↑ / ↓ to change the order they appear on the site. Names
+                and sub-groups are editable here too.
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Sub-groups (comma separated)</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {cats.map((c, i) => (
+                    <tr key={c.id}>
+                      <td>{i + 1}</td>
+                      <td>
+                        <input
+                          defaultValue={c.label}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim();
+                            if (v && v !== c.label) void saveCat(c, { label: v });
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          defaultValue={(c.subs ?? []).join(", ")}
+                          onBlur={(e) => {
+                            const subs = e.target.value
+                              .split(",")
+                              .map((s) => s.trim())
+                              .filter(Boolean);
+                            if (subs.join("|") !== (c.subs ?? []).join("|"))
+                              void saveCat(c, { subs });
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => void moveCat(i, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === cats.length - 1}
+                          onClick={() => void moveCat(i, 1)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          className="rowbtn danger"
+                          type="button"
+                          onClick={() => void delCat(c)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="btn btn-ghost" type="button" onClick={() => void addCat()}>
+                + Add niche
+              </button>
+
+              <h2 className="disp" style={{ marginTop: 26 }}>
+                Videos
+              </h2>
               <button
                 className="btn btn-acc"
                 type="button"
@@ -225,68 +378,57 @@ function Admin() {
                     />
                   </label>
                   <label className="mono">
-                    One-liner detail
-                    <input value={editor.detail} onChange={(e) => set("detail", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    Section
+                    Niche
                     <select value={editor.section} onChange={(e) => set("section", e.target.value)}>
-                      <option value="start">start (featured)</option>
-                      {SECTIONS.map((s) => (
+                      {(cats.length > 0
+                        ? cats.map((c) => ({ id: c.slug, label: c.label }))
+                        : SECTIONS.map((s) => ({ id: s.id, label: s.label }))
+                      ).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.label}
                         </option>
                       ))}
                     </select>
                   </label>
+                  {subOptions.length > 0 ? (
+                    <label className="mono">
+                      Sub-group
+                      <select value={editor.sub} onChange={(e) => set("sub", e.target.value)}>
+                        <option value="">— none —</option>
+                        {subOptions.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   <label className="mono">
-                    Sub-category (Teaser / Highlight / Reel)
-                    <input value={editor.sub} onChange={(e) => set("sub", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    Platform
-                    <select
-                      value={editor.platform}
-                      onChange={(e) => set("platform", e.target.value as Platform)}
-                    >
-                      <option value="instagram">instagram</option>
-                      <option value="youtube">youtube</option>
-                      <option value="vimeo">vimeo</option>
-                    </select>
-                  </label>
-                  <label className="mono">
-                    Video code / id
-                    <input
-                      value={editor.code}
-                      required
-                      onChange={(e) => set("code", e.target.value)}
-                    />
-                  </label>
-                  <label className="mono">
-                    Kind (p / reel / watch / shorts / video)
-                    <input value={editor.kind} onChange={(e) => set("kind", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    Aspect
+                    Shape
                     <select
                       value={editor.aspect}
                       onChange={(e) => set("aspect", e.target.value as Aspect)}
                     >
-                      <option value="landscape">landscape</option>
-                      <option value="portrait">portrait</option>
-                      <option value="4x5">4x5</option>
+                      <option value="landscape">Wide (film)</option>
+                      <option value="portrait">Vertical (reel)</option>
+                      <option value="4x5">Square-ish (4:5)</option>
                     </select>
                   </label>
-                  <label className="mono">
-                    Thumbnail path (e.g. /assets/thumbs/00.webp)
-                    <input value={editor.thumb} onChange={(e) => set("thumb", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    External link
-                    <input value={editor.link} onChange={(e) => set("link", e.target.value)} />
+                  <label className="mono full">
+                    Paste the video link (YouTube, Instagram or Vimeo)
+                    <input
+                      value={editor.link}
+                      placeholder="https://youtu.be/…"
+                      onChange={(e) => applyLink(e.target.value)}
+                    />
+                    <span className="msg">
+                      {editor.code
+                        ? `Detected: ${editor.platform} · ${editor.code}`
+                        : "We read the platform and video id from the link automatically."}
+                    </span>
                   </label>
                   <label className="mono full">
-                    Upload video file (plays with no outside branding)
+                    …or upload the video file (plays with no outside branding)
                     <input
                       type="file"
                       accept="video/*"
@@ -299,22 +441,52 @@ function Admin() {
                       <span className="msg">Stored file: {editor.file_path}</span>
                     ) : null}
                   </label>
-                  <label className="mono">
-                    Position
-                    <input
-                      type="number"
-                      value={editor.position}
-                      onChange={(e) => set("position", Number(e.target.value))}
-                    />
-                  </label>
-                  <label className="mono">
-                    Featured
-                    <input
-                      type="checkbox"
-                      checked={editor.featured}
-                      onChange={(e) => set("featured", e.target.checked)}
-                    />
-                  </label>
+
+                  <div className="full">
+                    <button className="rowbtn" type="button" onClick={() => setAdv((v) => !v)}>
+                      {adv ? "Hide advanced" : "Advanced options"}
+                    </button>
+                  </div>
+
+                  {adv ? (
+                    <>
+                      <label className="mono">
+                        Platform
+                        <select
+                          value={editor.platform}
+                          onChange={(e) => set("platform", e.target.value as Platform)}
+                        >
+                          <option value="instagram">instagram</option>
+                          <option value="youtube">youtube</option>
+                          <option value="vimeo">vimeo</option>
+                        </select>
+                      </label>
+                      <label className="mono">
+                        Video code / id
+                        <input value={editor.code} onChange={(e) => set("code", e.target.value)} />
+                      </label>
+                      <label className="mono">
+                        Kind (p / reel / watch / shorts / video)
+                        <input value={editor.kind} onChange={(e) => set("kind", e.target.value)} />
+                      </label>
+                      <label className="mono">
+                        Thumbnail path (e.g. /assets/thumbs/00.webp)
+                        <input
+                          value={editor.thumb}
+                          onChange={(e) => set("thumb", e.target.value)}
+                        />
+                      </label>
+                      <label className="mono">
+                        Position
+                        <input
+                          type="number"
+                          value={editor.position}
+                          onChange={(e) => set("position", Number(e.target.value))}
+                        />
+                      </label>
+                    </>
+                  ) : null}
+
                   <div className="full">
                     <button className="btn btn-acc" type="submit">
                       {editor.id ? "Save changes" : "Add to catalogue"}

@@ -72,10 +72,10 @@ export function Header() {
 
 /* ---------------- left rail: niches only ---------------- */
 
-export function Rail() {
+export function Rail({ sections = SECTIONS }: { sections?: { id: string; label: string }[] }) {
   return (
     <nav className="rail" aria-label="Niches">
-      {SECTIONS.map((s) => (
+      {sections.map((s) => (
         <a key={s.id} href={`#${s.id}`}>
           {s.label}
         </a>
@@ -166,8 +166,8 @@ export function RenderBar() {
 
 /* ---------------- marquee ---------------- */
 
-export function Marquee() {
-  const items = ["Video", "Film", "Editing", "House", ...SECTIONS.map((s) => s.label)];
+export function Marquee({ sections = SECTIONS }: { sections?: { id: string; label: string }[] }) {
+  const items = ["Video", "Film", "Editing", "House", ...sections.map((s) => s.label)];
   const half = (key: string) =>
     items.map((t, i) => (
       <span key={`${key}${i}`}>
