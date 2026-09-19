@@ -9,6 +9,8 @@ import { supabase } from "../integrations/supabase/client";
 
 type Row = Video & { id: string };
 
+type Cat = { id: string; slug: string; label: string; subs: string[]; position: number };
+
 type EditorState = {
   id: string | null;
   section: string;
