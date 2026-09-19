@@ -57,6 +57,7 @@ function Admin() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [cats, setCats] = useState<Cat[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -68,6 +69,11 @@ function Admin() {
       .select("*")
       .order("position", { ascending: true });
     if (data) setRows(data as unknown as Row[]);
+    const { data: cs } = await supabase
+      .from("categories")
+      .select("*")
+      .order("position", { ascending: true });
+    if (cs) setCats(cs as unknown as Cat[]);
   }, []);
 
   useEffect(() => {
