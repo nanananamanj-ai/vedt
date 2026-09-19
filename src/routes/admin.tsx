@@ -359,8 +359,10 @@ function Admin() {
                   <label className="mono">
                     Section
                     <select value={editor.section} onChange={(e) => set("section", e.target.value)}>
-                      <option value="start">start (featured)</option>
-                      {SECTIONS.map((s) => (
+                      {(cats.length > 0
+                        ? cats.map((c) => ({ id: c.slug, label: c.label }))
+                        : SECTIONS.map((s) => ({ id: s.id, label: s.label }))
+                      ).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.label}
                         </option>
