@@ -256,6 +256,84 @@ function Admin() {
                 </button>
               </p>
 
+              <h2 className="disp" style={{ marginTop: 18 }}>
+                Niches
+              </h2>
+              <p className="note">
+                Drag-free ordering: use ↑ / ↓ to change the order they appear on the site. Names
+                and sub-groups are editable here too.
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Sub-groups (comma separated)</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {cats.map((c, i) => (
+                    <tr key={c.id}>
+                      <td>{i + 1}</td>
+                      <td>
+                        <input
+                          defaultValue={c.label}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim();
+                            if (v && v !== c.label) void saveCat(c, { label: v });
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          defaultValue={(c.subs ?? []).join(", ")}
+                          onBlur={(e) => {
+                            const subs = e.target.value
+                              .split(",")
+                              .map((s) => s.trim())
+                              .filter(Boolean);
+                            if (subs.join("|") !== (c.subs ?? []).join("|"))
+                              void saveCat(c, { subs });
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => void moveCat(i, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="rowbtn"
+                          type="button"
+                          disabled={i === cats.length - 1}
+                          onClick={() => void moveCat(i, 1)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          className="rowbtn danger"
+                          type="button"
+                          onClick={() => void delCat(c)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="btn btn-ghost" type="button" onClick={() => void addCat()}>
+                + Add niche
+              </button>
+
+              <h2 className="disp" style={{ marginTop: 26 }}>
+                Videos
+              </h2>
               <button
                 className="btn btn-acc"
                 type="button"
