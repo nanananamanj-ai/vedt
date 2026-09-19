@@ -61,6 +61,7 @@ function Admin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [adv, setAdv] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
 
   const load = useCallback(async () => {
@@ -206,6 +207,30 @@ function Admin() {
 
   const set = <K extends keyof EditorState>(k: K, v: EditorState[K]) =>
     setEditor((s) => (s ? { ...s, [k]: v } : s));
+
+  // Sub-groups offered for the currently selected niche.
+  const subOptions: string[] =
+    cats.find((c) => c.slug === editor?.section)?.subs ??
+    SECTIONS.find((s) => s.id === editor?.section)?.subs ??
+    [];
+
+  // Paste a link → work out platform, id and kind so the admin types less.
+  const applyLink = (raw: string) => {
+    const link = raw.trim();
+    let patch: Partial<EditorState> = { link };
+    const yt =
+      link.match(/youtu\.be\/([\w-]+)/) ??
+      link.match(/youtube\.com\/(?:watch\?v=|embed\/)([\w-]+)/) ??
+      null;
+    const shorts = link.match(/youtube\.com\/shorts\/([\w-]+)/);
+    const ig = link.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/);
+    const vm = link.match(/vimeo\.com\/(\d+)/);
+    if (shorts) patch = { ...patch, platform: "youtube", code: shorts[1]!, kind: "shorts" };
+    else if (yt) patch = { ...patch, platform: "youtube", code: yt[1]!, kind: "watch" };
+    else if (ig) patch = { ...patch, platform: "instagram", code: ig[2]!, kind: ig[1]! };
+    else if (vm) patch = { ...patch, platform: "vimeo", code: vm[1]!, kind: "video" };
+    setEditor((s) => (s ? { ...s, ...patch } : s));
+  };
 
   return (
     <>
