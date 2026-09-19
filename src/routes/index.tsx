@@ -64,31 +64,24 @@ function Rows({ id, list }: { id: string; list: import("../vedt/data").Video[] }
 
 
 function Index() {
-  const videos = Route.useLoaderData() ?? VIDEOS;
-  const featured = videos.filter((v) => v.featured || v.section === "start");
+  const data = Route.useLoaderData();
+  const videos = data?.videos ?? VIDEOS;
+  const sections = data?.sections ?? SECTIONS;
 
   return (
     <>
       <Preloader />
       <Header />
-      <Rail />
+      <Rail sections={sections} />
       <main>
         <section className="hero" aria-label="Intro">
           <p className="mono kicker">Video / Film Editing House</p>
           <h1 className="disp">Cuts that solve the story.</h1>
         </section>
 
-        <Marquee />
+        <Marquee sections={sections} />
 
-        <section id="start" aria-label="Featured work">
-          <div className="strip">
-            {featured.map((v) => (
-              <VideoCard key={`s${v.position}`} v={v} />
-            ))}
-          </div>
-        </section>
-
-        {SECTIONS.map((sec) => {
+        {sections.map((sec) => {
           const list = videos.filter((v) => v.section === sec.id);
           return (
             <section id={sec.id} key={sec.id} aria-label={sec.label}>
