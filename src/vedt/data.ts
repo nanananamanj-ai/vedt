@@ -587,11 +587,11 @@ export interface SectionMeta {
   subs?: string[];
 }
 export const SECTIONS: SectionMeta[] = [
+  { id: "travel", label: "Travel" },
   { id: "brands", label: "Brands" },
   { id: "weddings", label: "Weddings", subs: ["Teaser", "Highlight", "Reel"] },
   { id: "events", label: "Events" },
   { id: "podcasts", label: "Podcasts" },
-  { id: "travel", label: "Travel" },
   { id: "music", label: "Music" },
 ];
 
