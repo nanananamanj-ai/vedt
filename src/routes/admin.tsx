@@ -146,6 +146,48 @@ function Admin() {
     await load();
   };
 
+  // Reorder niches: swap positions with the neighbouring category.
+  const moveCat = async (index: number, dir: -1 | 1) => {
+    const a = cats[index];
+    const b = cats[index + dir];
+    if (!a || !b) return;
+    await supabase.from("categories").update({ position: b.position }).eq("id", a.id);
+    await supabase.from("categories").update({ position: a.position }).eq("id", b.id);
+    await load();
+  };
+
+  const saveCat = async (c: Cat, patch: Partial<Cat>) => {
+    const { error } = await supabase.from("categories").update(patch).eq("id", c.id);
+    setMsg(
+      error
+        ? { text: `Category save failed: ${error.message}`, err: true }
+        : { text: "Category updated.", err: false },
+    );
+    await load();
+  };
+
+  const addCat = async () => {
+    const label = window.prompt("New niche name (e.g. Fashion)")?.trim();
+    if (!label) return;
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const { error } = await supabase
+      .from("categories")
+      .insert({ slug, label, subs: [], position: cats.length });
+    setMsg(
+      error
+        ? { text: `Add failed: ${error.message}`, err: true }
+        : { text: `Added ${label}.`, err: false },
+    );
+    await load();
+  };
+
+  const delCat = async (c: Cat) => {
+    if (!window.confirm(`Remove the ${c.label} niche? Videos in it stay in the database.`)) return;
+    const { error } = await supabase.from("categories").delete().eq("id", c.id);
+    if (error) setMsg({ text: `Delete failed: ${error.message}`, err: true });
+    await load();
+  };
+
   // Upload the actual video file to private storage; playback then shows no
   // outside branding at all.
   const upload = async (file: File) => {
