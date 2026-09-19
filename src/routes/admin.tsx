@@ -353,11 +353,7 @@ function Admin() {
                     />
                   </label>
                   <label className="mono">
-                    One-liner detail
-                    <input value={editor.detail} onChange={(e) => set("detail", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    Section
+                    Niche
                     <select value={editor.section} onChange={(e) => set("section", e.target.value)}>
                       {(cats.length > 0
                         ? cats.map((c) => ({ id: c.slug, label: c.label }))
@@ -369,54 +365,45 @@ function Admin() {
                       ))}
                     </select>
                   </label>
+                  {subOptions.length > 0 ? (
+                    <label className="mono">
+                      Sub-group
+                      <select value={editor.sub} onChange={(e) => set("sub", e.target.value)}>
+                        <option value="">— none —</option>
+                        {subOptions.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   <label className="mono">
-                    Sub-category (Teaser / Highlight / Reel)
-                    <input value={editor.sub} onChange={(e) => set("sub", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    Platform
-                    <select
-                      value={editor.platform}
-                      onChange={(e) => set("platform", e.target.value as Platform)}
-                    >
-                      <option value="instagram">instagram</option>
-                      <option value="youtube">youtube</option>
-                      <option value="vimeo">vimeo</option>
-                    </select>
-                  </label>
-                  <label className="mono">
-                    Video code / id
-                    <input
-                      value={editor.code}
-                      required
-                      onChange={(e) => set("code", e.target.value)}
-                    />
-                  </label>
-                  <label className="mono">
-                    Kind (p / reel / watch / shorts / video)
-                    <input value={editor.kind} onChange={(e) => set("kind", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    Aspect
+                    Shape
                     <select
                       value={editor.aspect}
                       onChange={(e) => set("aspect", e.target.value as Aspect)}
                     >
-                      <option value="landscape">landscape</option>
-                      <option value="portrait">portrait</option>
-                      <option value="4x5">4x5</option>
+                      <option value="landscape">Wide (film)</option>
+                      <option value="portrait">Vertical (reel)</option>
+                      <option value="4x5">Square-ish (4:5)</option>
                     </select>
                   </label>
-                  <label className="mono">
-                    Thumbnail path (e.g. /assets/thumbs/00.webp)
-                    <input value={editor.thumb} onChange={(e) => set("thumb", e.target.value)} />
-                  </label>
-                  <label className="mono">
-                    External link
-                    <input value={editor.link} onChange={(e) => set("link", e.target.value)} />
+                  <label className="mono full">
+                    Paste the video link (YouTube, Instagram or Vimeo)
+                    <input
+                      value={editor.link}
+                      placeholder="https://youtu.be/…"
+                      onChange={(e) => applyLink(e.target.value)}
+                    />
+                    <span className="msg">
+                      {editor.code
+                        ? `Detected: ${editor.platform} · ${editor.code}`
+                        : "We read the platform and video id from the link automatically."}
+                    </span>
                   </label>
                   <label className="mono full">
-                    Upload video file (plays with no outside branding)
+                    …or upload the video file (plays with no outside branding)
                     <input
                       type="file"
                       accept="video/*"
@@ -429,22 +416,52 @@ function Admin() {
                       <span className="msg">Stored file: {editor.file_path}</span>
                     ) : null}
                   </label>
-                  <label className="mono">
-                    Position
-                    <input
-                      type="number"
-                      value={editor.position}
-                      onChange={(e) => set("position", Number(e.target.value))}
-                    />
-                  </label>
-                  <label className="mono">
-                    Featured
-                    <input
-                      type="checkbox"
-                      checked={editor.featured}
-                      onChange={(e) => set("featured", e.target.checked)}
-                    />
-                  </label>
+
+                  <div className="full">
+                    <button className="rowbtn" type="button" onClick={() => setAdv((v) => !v)}>
+                      {adv ? "Hide advanced" : "Advanced options"}
+                    </button>
+                  </div>
+
+                  {adv ? (
+                    <>
+                      <label className="mono">
+                        Platform
+                        <select
+                          value={editor.platform}
+                          onChange={(e) => set("platform", e.target.value as Platform)}
+                        >
+                          <option value="instagram">instagram</option>
+                          <option value="youtube">youtube</option>
+                          <option value="vimeo">vimeo</option>
+                        </select>
+                      </label>
+                      <label className="mono">
+                        Video code / id
+                        <input value={editor.code} onChange={(e) => set("code", e.target.value)} />
+                      </label>
+                      <label className="mono">
+                        Kind (p / reel / watch / shorts / video)
+                        <input value={editor.kind} onChange={(e) => set("kind", e.target.value)} />
+                      </label>
+                      <label className="mono">
+                        Thumbnail path (e.g. /assets/thumbs/00.webp)
+                        <input
+                          value={editor.thumb}
+                          onChange={(e) => set("thumb", e.target.value)}
+                        />
+                      </label>
+                      <label className="mono">
+                        Position
+                        <input
+                          type="number"
+                          value={editor.position}
+                          onChange={(e) => set("position", Number(e.target.value))}
+                        />
+                      </label>
+                    </>
+                  ) : null}
+
                   <div className="full">
                     <button className="btn btn-acc" type="submit">
                       {editor.id ? "Save changes" : "Add to catalogue"}
