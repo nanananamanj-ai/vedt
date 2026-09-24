@@ -285,6 +285,9 @@ function Admin() {
               <button className="btn btn-acc" type="submit">
                 Sign in
               </button>
+              <button className="btn btn-ghost" type="button" onClick={() => void createLogin()}>
+                First time? Create my password
+              </button>
               {msg ? <p className={`msg${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
             </form>
           ) : (
