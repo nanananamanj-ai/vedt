@@ -93,6 +93,25 @@ function Admin() {
     setMsg(error ? { text: error.message, err: true } : { text: "Signed in.", err: false });
   };
 
+  // First run: no account exists yet, so let the owner set their password here.
+  const createLogin = async () => {
+    if (!email || password.length < 6) {
+      setMsg({ text: "Enter your email and a password of at least 6 characters.", err: true });
+      return;
+    }
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setMsg({ text: error.message, err: true });
+      return;
+    }
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    setMsg(
+      signInError
+        ? { text: "Account created. Confirm your email, then sign in.", err: false }
+        : { text: "Account created and signed in.", err: false },
+    );
+  };
+
   const save = async (e: FormEvent) => {
     e.preventDefault();
     if (!editor) return;
@@ -265,6 +284,9 @@ function Admin() {
               />
               <button className="btn btn-acc" type="submit">
                 Sign in
+              </button>
+              <button className="btn btn-ghost" type="button" onClick={() => void createLogin()}>
+                First time? Create my password
               </button>
               {msg ? <p className={`msg${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
             </form>
