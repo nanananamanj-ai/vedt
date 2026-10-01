@@ -4,7 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import vedtCss from "../vedt/vedt.css?url";
 import { SECTIONS, type Aspect, type Platform, type Video } from "../vedt/data";
-import { Header } from "../vedt/ui";
+import { Header, ThemeToggle } from "../vedt/ui";
 import { supabase } from "../integrations/supabase/client";
 
 type Row = Video & { id: string };
@@ -47,7 +47,15 @@ const blank = (position: number): EditorState => ({
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    meta: [{ title: "Admin — V-EDT" }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: "Portfolio Admin — V-EDT" },
+      { name: "description", content: "Private V-EDT portfolio management workspace." },
+      { property: "og:title", content: "Portfolio Admin — V-EDT" },
+      { property: "og:description", content: "Private V-EDT portfolio management workspace." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
     links: [{ rel: "stylesheet", href: vedtCss }],
   }),
   component: Admin,
@@ -62,6 +70,7 @@ function Admin() {
   const [password, setPassword] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [adv, setAdv] = useState(false);
+  const [view, setView] = useState<"videos" | "niches">("videos");
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
 
   const load = useCallback(async () => {
@@ -82,18 +91,17 @@ function Admin() {
       setSession(data.session);
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
     void load();
     return () => sub.subscription.unsubscribe();
   }, [load]);
 
-  const login = async (e: FormEvent) => {
-    e.preventDefault();
+  const login = async (event: FormEvent) => {
+    event.preventDefault();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setMsg(error ? { text: error.message, err: true } : { text: "Signed in.", err: false });
   };
 
-  // First run: no account exists yet, so let the owner set their password here.
   const createLogin = async () => {
     if (!email || password.length < 6) {
       setMsg({ text: "Enter your email and a password of at least 6 characters.", err: true });
@@ -105,19 +113,17 @@ function Admin() {
       return;
     }
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setMsg(
-      signInError
-        ? { text: "Account created. Confirm your email, then sign in.", err: false }
-        : { text: "Account created and signed in.", err: false },
-    );
+    setMsg(signInError
+      ? { text: "Account created. Confirm your email, then sign in.", err: false }
+      : { text: "Account created and signed in.", err: false });
   };
 
-  const save = async (e: FormEvent) => {
-    e.preventDefault();
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
     if (!editor) return;
     const payload = {
       section: editor.section,
-      sub: editor.sub.trim() === "" ? null : editor.sub.trim(),
+      sub: editor.sub.trim() || null,
       platform: editor.platform,
       code: editor.code,
       kind: editor.kind,
@@ -128,17 +134,14 @@ function Admin() {
       link: editor.link,
       featured: editor.featured,
       position: editor.position,
-      file_path: editor.file_path.trim() === "" ? null : editor.file_path.trim(),
+      file_path: editor.file_path.trim() || null,
     };
-    const q = editor.id
+    const query = editor.id
       ? supabase.from("videos").update(payload).eq("id", editor.id)
       : supabase.from("videos").insert(payload);
-    const { error } = await q;
+    const { error } = await query;
     if (error) {
-      setMsg({
-        text: `Save failed: ${error.message} — writes require the admin role (see note below).`,
-        err: true,
-      });
+      setMsg({ text: `Save failed: ${error.message}`, err: true });
       return;
     }
     setMsg({ text: editor.id ? "Updated." : "Added.", err: false });
@@ -147,69 +150,59 @@ function Admin() {
   };
 
   const remove = async (id: string) => {
+    if (!window.confirm("Delete this video?")) return;
     const { error } = await supabase.from("videos").delete().eq("id", id);
-    setMsg(
-      error
-        ? { text: `Delete failed: ${error.message}`, err: true }
-        : { text: "Deleted.", err: false },
-    );
+    setMsg(error ? { text: `Delete failed: ${error.message}`, err: true } : { text: "Deleted.", err: false });
     await load();
   };
 
-  // Move a row up or down by swapping positions with its neighbour.
-  const move = async (index: number, dir: -1 | 1) => {
-    const a = rows[index];
-    const b = rows[index + dir];
-    if (!a || !b) return;
-    await supabase.from("videos").update({ position: b.position }).eq("id", a.id);
-    await supabase.from("videos").update({ position: a.position }).eq("id", b.id);
+  const move = async (index: number, direction: -1 | 1) => {
+    const current = rows[index];
+    const neighbour = rows[index + direction];
+    if (!current || !neighbour) return;
+    const first = await supabase.from("videos").update({ position: neighbour.position }).eq("id", current.id);
+    const second = await supabase.from("videos").update({ position: current.position }).eq("id", neighbour.id);
+    const error = first.error ?? second.error;
+    if (error) setMsg({ text: `Reorder failed: ${error.message}`, err: true });
     await load();
   };
 
-  // Reorder niches: swap positions with the neighbouring category.
-  const moveCat = async (index: number, dir: -1 | 1) => {
-    const a = cats[index];
-    const b = cats[index + dir];
-    if (!a || !b) return;
-    await supabase.from("categories").update({ position: b.position }).eq("id", a.id);
-    await supabase.from("categories").update({ position: a.position }).eq("id", b.id);
+  const moveCat = async (index: number, direction: -1 | 1) => {
+    const current = cats[index];
+    const neighbour = cats[index + direction];
+    if (!current || !neighbour) return;
+    const first = await supabase.from("categories").update({ position: neighbour.position }).eq("id", current.id);
+    const second = await supabase.from("categories").update({ position: current.position }).eq("id", neighbour.id);
+    const error = first.error ?? second.error;
+    if (error) setMsg({ text: `Reorder failed: ${error.message}`, err: true });
     await load();
   };
 
-  const saveCat = async (c: Cat, patch: Partial<Cat>) => {
-    const { error } = await supabase.from("categories").update(patch).eq("id", c.id);
-    setMsg(
-      error
-        ? { text: `Category save failed: ${error.message}`, err: true }
-        : { text: "Category updated.", err: false },
-    );
+  const saveCat = async (category: Cat, patch: Partial<Cat>) => {
+    const { error } = await supabase.from("categories").update(patch).eq("id", category.id);
+    setMsg(error ? { text: `Niche save failed: ${error.message}`, err: true } : { text: "Niche updated.", err: false });
     await load();
   };
 
   const addCat = async () => {
-    const label = window.prompt("New niche name (e.g. Fashion)")?.trim();
+    const label = window.prompt("New niche name")?.trim();
     if (!label) return;
     const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const { error } = await supabase
-      .from("categories")
-      .insert({ slug, label, subs: [], position: cats.length });
-    setMsg(
-      error
-        ? { text: `Add failed: ${error.message}`, err: true }
-        : { text: `Added ${label}.`, err: false },
-    );
+    const { error } = await supabase.from("categories").insert({ slug, label, subs: [], position: cats.length });
+    setMsg(error ? { text: `Add failed: ${error.message}`, err: true } : { text: `Added ${label}.`, err: false });
     await load();
   };
 
-  const delCat = async (c: Cat) => {
-    if (!window.confirm(`Remove the ${c.label} niche? Videos in it stay in the database.`)) return;
-    const { error } = await supabase.from("categories").delete().eq("id", c.id);
-    if (error) setMsg({ text: `Delete failed: ${error.message}`, err: true });
+  const delCat = async (category: Cat) => {
+    if (!window.confirm(`Remove the ${category.label} niche? Videos in it will remain stored.`)) return;
+    const { error } = await supabase.from("categories").delete().eq("id", category.id);
+    setMsg(error ? { text: `Delete failed: ${error.message}`, err: true } : { text: "Niche deleted.", err: false });
     await load();
   };
 
-  // Upload the actual video file to private storage; playback then shows no
-  // outside branding at all.
+  const set = <K extends keyof EditorState>(key: K, value: EditorState[K]) =>
+    setEditor((state) => state ? { ...state, [key]: value } : state);
+
   const upload = async (file: File) => {
     setMsg({ text: `Uploading ${file.name}…`, err: false });
     const path = `videos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
@@ -222,399 +215,127 @@ function Admin() {
     setMsg({ text: "Uploaded. Save to apply.", err: false });
   };
 
+  const subOptions = cats.find((category) => category.slug === editor?.section)?.subs
+    ?? SECTIONS.find((section) => section.id === editor?.section)?.subs
+    ?? [];
 
-
-  const set = <K extends keyof EditorState>(k: K, v: EditorState[K]) =>
-    setEditor((s) => (s ? { ...s, [k]: v } : s));
-
-  // Sub-groups offered for the currently selected niche.
-  const subOptions: string[] =
-    cats.find((c) => c.slug === editor?.section)?.subs ??
-    SECTIONS.find((s) => s.id === editor?.section)?.subs ??
-    [];
-
-  // Paste a link → work out platform, id and kind so the admin types less.
   const applyLink = (raw: string) => {
     const link = raw.trim();
     let patch: Partial<EditorState> = { link };
-    const yt =
-      link.match(/youtu\.be\/([\w-]+)/) ??
-      link.match(/youtube\.com\/(?:watch\?v=|embed\/)([\w-]+)/) ??
-      null;
     const shorts = link.match(/youtube\.com\/shorts\/([\w-]+)/);
-    const ig = link.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/);
-    const vm = link.match(/vimeo\.com\/(\d+)/);
-    if (shorts) patch = { ...patch, platform: "youtube", code: shorts[1]!, kind: "shorts" };
-    else if (yt) patch = { ...patch, platform: "youtube", code: yt[1]!, kind: "watch" };
-    else if (ig) patch = { ...patch, platform: "instagram", code: ig[2]!, kind: ig[1]! };
-    else if (vm) patch = { ...patch, platform: "vimeo", code: vm[1]!, kind: "video" };
-    setEditor((s) => (s ? { ...s, ...patch } : s));
+    const youtube = link.match(/youtu\.be\/([\w-]+)/) ?? link.match(/youtube\.com\/(?:watch\?v=|embed\/)([\w-]+)/);
+    const instagram = link.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/);
+    const vimeo = link.match(/vimeo\.com\/(\d+)/);
+    if (shorts?.[1]) patch = { ...patch, platform: "youtube", code: shorts[1], kind: "shorts" };
+    else if (youtube?.[1]) patch = { ...patch, platform: "youtube", code: youtube[1], kind: "watch" };
+    else if (instagram?.[2] && instagram[1]) patch = { ...patch, platform: "instagram", code: instagram[2], kind: instagram[1] };
+    else if (vimeo?.[1]) patch = { ...patch, platform: "vimeo", code: vimeo[1], kind: "video" };
+    setEditor((state) => state ? { ...state, ...patch } : state);
   };
 
+  const openEditor = (r: Row) => {
+    setAdv(false);
+    setEditor({
+      id: r.id, section: r.section, sub: r.sub ?? "", platform: r.platform,
+      code: r.code, kind: r.kind, aspect: r.aspect, title: r.title,
+      detail: r.detail, thumb: r.thumb, link: r.link, featured: r.featured,
+      position: r.position, file_path: r.file_path ?? "",
+    });
+  };
+
+  if (!ready || !session) {
+    return (
+      <>
+        <Header />
+        <main>
+          <div className="adm adm-login">
+            <p className="mono">Private workspace</p>
+            <h1 className="disp">Admin</h1>
+            <p className="note">Sign in to manage the V-EDT portfolio.</p>
+            {!ready ? <p className="msg">Loading…</p> : (
+              <form className="login" onSubmit={login}>
+                <input type="email" required placeholder="Email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
+                <input type="password" required placeholder="Password" aria-label="Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                <button className="btn btn-acc" type="submit">Sign in</button>
+                <button className="btn btn-ghost" type="button" onClick={() => void createLogin()}>First time? Create my password</button>
+                {msg ? <p className={`msg${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
+              </form>
+            )}
+            <Link className="mono adm-back" to="/">← Back to the site</Link>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   return (
-    <>
-      <Header />
-      <main>
-        <div className="adm">
-          <h1 className="disp">Admin</h1>
-          <p className="note">
-            Manage the public catalogue directly — every save here is what the homepage renders.
-            Writes are protected by Row Level Security and require the <code>admin</code> role.
-          </p>
-
-          {!ready ? (
-            <p className="msg">Loading…</p>
-          ) : !session ? (
-            <form className="login" onSubmit={login}>
-              <input
-                type="email"
-                required
-                placeholder="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="username"
-              />
-              <input
-                type="password"
-                required
-                placeholder="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-              <button className="btn btn-acc" type="submit">
-                Sign in
-              </button>
-              <button className="btn btn-ghost" type="button" onClick={() => void createLogin()}>
-                First time? Create my password
-              </button>
-              {msg ? <p className={`msg${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
-            </form>
-          ) : (
-            <>
-              <p className="msg">
-                Signed in as {session.user.email} ·{" "}
-                <button
-                  className="rowbtn"
-                  onClick={() => void supabase.auth.signOut()}
-                  type="button"
-                >
-                  Sign out
-                </button>
-              </p>
-
-              <h2 className="disp" style={{ marginTop: 18 }}>
-                Niches
-              </h2>
-              <p className="note">
-                Drag-free ordering: use ↑ / ↓ to change the order they appear on the site. Names
-                and sub-groups are editable here too.
-              </p>
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Sub-groups (comma separated)</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {cats.map((c, i) => (
-                    <tr key={c.id}>
-                      <td>{i + 1}</td>
-                      <td>
-                        <input
-                          defaultValue={c.label}
-                          onBlur={(e) => {
-                            const v = e.target.value.trim();
-                            if (v && v !== c.label) void saveCat(c, { label: v });
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          defaultValue={(c.subs ?? []).join(", ")}
-                          onBlur={(e) => {
-                            const subs = e.target.value
-                              .split(",")
-                              .map((s) => s.trim())
-                              .filter(Boolean);
-                            if (subs.join("|") !== (c.subs ?? []).join("|"))
-                              void saveCat(c, { subs });
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="rowbtn"
-                          type="button"
-                          disabled={i === 0}
-                          onClick={() => void moveCat(i, -1)}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          className="rowbtn"
-                          type="button"
-                          disabled={i === cats.length - 1}
-                          onClick={() => void moveCat(i, 1)}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          className="rowbtn danger"
-                          type="button"
-                          onClick={() => void delCat(c)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button className="btn btn-ghost" type="button" onClick={() => void addCat()}>
-                + Add niche
-              </button>
-
-              <h2 className="disp" style={{ marginTop: 26 }}>
-                Videos
-              </h2>
-              <button
-                className="btn btn-acc"
-                type="button"
-                onClick={() => setEditor(blank(rows.length))}
-              >
-                + Add video
-              </button>
-
-              {editor ? (
-                <form className="editor" onSubmit={save}>
-                  <label className="mono">
-                    Title
-                    <input
-                      value={editor.title}
-                      required
-                      onChange={(e) => set("title", e.target.value)}
-                    />
-                  </label>
-                  <label className="mono">
-                    Niche
-                    <select value={editor.section} onChange={(e) => set("section", e.target.value)}>
-                      {(cats.length > 0
-                        ? cats.map((c) => ({ id: c.slug, label: c.label }))
-                        : SECTIONS.map((s) => ({ id: s.id, label: s.label }))
-                      ).map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {subOptions.length > 0 ? (
-                    <label className="mono">
-                      Sub-group
-                      <select value={editor.sub} onChange={(e) => set("sub", e.target.value)}>
-                        <option value="">— none —</option>
-                        {subOptions.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
-                  <label className="mono">
-                    Shape
-                    <select
-                      value={editor.aspect}
-                      onChange={(e) => set("aspect", e.target.value as Aspect)}
-                    >
-                      <option value="landscape">Wide (film)</option>
-                      <option value="portrait">Vertical (reel)</option>
-                      <option value="4x5">Square-ish (4:5)</option>
-                    </select>
-                  </label>
-                  <label className="mono full">
-                    Paste the video link (YouTube, Instagram or Vimeo)
-                    <input
-                      value={editor.link}
-                      placeholder="https://youtu.be/…"
-                      onChange={(e) => applyLink(e.target.value)}
-                    />
-                    <span className="msg">
-                      {editor.code
-                        ? `Detected: ${editor.platform} · ${editor.code}`
-                        : "We read the platform and video id from the link automatically."}
-                    </span>
-                  </label>
-                  <label className="mono full">
-                    …or upload the video file (plays with no outside branding)
-                    <input
-                      type="file"
-                      accept="video/*"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) void upload(f);
-                      }}
-                    />
-                    {editor.file_path ? (
-                      <span className="msg">Stored file: {editor.file_path}</span>
-                    ) : null}
-                  </label>
-
-                  <div className="full">
-                    <button className="rowbtn" type="button" onClick={() => setAdv((v) => !v)}>
-                      {adv ? "Hide advanced" : "Advanced options"}
-                    </button>
-                  </div>
-
-                  {adv ? (
-                    <>
-                      <label className="mono">
-                        Platform
-                        <select
-                          value={editor.platform}
-                          onChange={(e) => set("platform", e.target.value as Platform)}
-                        >
-                          <option value="instagram">instagram</option>
-                          <option value="youtube">youtube</option>
-                          <option value="vimeo">vimeo</option>
-                        </select>
-                      </label>
-                      <label className="mono">
-                        Video code / id
-                        <input value={editor.code} onChange={(e) => set("code", e.target.value)} />
-                      </label>
-                      <label className="mono">
-                        Kind (p / reel / watch / shorts / video)
-                        <input value={editor.kind} onChange={(e) => set("kind", e.target.value)} />
-                      </label>
-                      <label className="mono">
-                        Thumbnail path (e.g. /assets/thumbs/00.webp)
-                        <input
-                          value={editor.thumb}
-                          onChange={(e) => set("thumb", e.target.value)}
-                        />
-                      </label>
-                      <label className="mono">
-                        Position
-                        <input
-                          type="number"
-                          value={editor.position}
-                          onChange={(e) => set("position", Number(e.target.value))}
-                        />
-                      </label>
-                    </>
-                  ) : null}
-
-                  <div className="full">
-                    <button className="btn btn-acc" type="submit">
-                      {editor.id ? "Save changes" : "Add to catalogue"}
-                    </button>{" "}
-                    <button className="btn btn-ghost" type="button" onClick={() => setEditor(null)}>
-                      Cancel
-                    </button>
-                  </div>
-                  {msg ? <p className={`msg full${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
-                </form>
-              ) : null}
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Section</th>
-                    <th>Title</th>
-                    <th>Platform</th>
-                    <th>Aspect</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={r.id}>
-                      <td>{r.position}</td>
-                      <td>
-                        {r.section}
-                        {r.sub ? ` / ${r.sub}` : ""}
-                      </td>
-                      <td>{r.title}</td>
-                      <td>{r.platform}</td>
-                      <td>{r.aspect}</td>
-                      <td>
-                        <button
-                          className="rowbtn"
-                          type="button"
-                          disabled={i === 0}
-                          onClick={() => void move(i, -1)}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          className="rowbtn"
-                          type="button"
-                          disabled={i === rows.length - 1}
-                          onClick={() => void move(i, 1)}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          className="rowbtn"
-                          type="button"
-                          onClick={() =>
-                            setEditor({
-                              id: r.id,
-                              section: r.section,
-                              sub: r.sub ?? "",
-                              platform: r.platform,
-                              code: r.code,
-                              kind: r.kind,
-                              aspect: r.aspect,
-                              title: r.title,
-                              detail: r.detail,
-                              thumb: r.thumb,
-                              link: r.link,
-                              featured: r.featured,
-                              position: r.position,
-                              file_path: r.file_path ?? "",
-                            })
-                          }
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="rowbtn danger"
-                          type="button"
-                          onClick={() => void remove(r.id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <p className="note" style={{ marginTop: 26 }}>
-                First time? If your signed-in user cannot write yet, grant the admin role once in
-                the Supabase SQL editor:{" "}
-                <code>
-                  insert into public.user_roles (user_id, role) values
-                  (&apos;&lt;your-auth-user-uuid&gt;&apos;, &apos;admin&apos;);
-                </code>
-              </p>
-            </>
-          )}
-
-          <p className="note">
-            <Link className="mono" to="/">
-              ← Back to the site
-            </Link>
-          </p>
+    <main className="admin-shell">
+      <aside className="admin-side">
+        <Link className="admin-mark" to="/" aria-label="V-EDT home">V</Link>
+        <nav aria-label="Admin sections">
+          <button className={view === "videos" ? "active" : ""} onClick={() => setView("videos")} type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 4 13 8-13 8V4Z" /></svg><span>Videos</span>
+          </button>
+          <button className={view === "niches" ? "active" : ""} onClick={() => setView("niches")} type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg><span>Niches</span>
+          </button>
+        </nav>
+        <div className="admin-side-foot">
+          <ThemeToggle />
+          <Link to="/" title="View site" aria-label="View site"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M19 14v5H5V5h5" /></svg></Link>
+          <button type="button" title="Sign out" aria-label="Sign out" onClick={() => void supabase.auth.signOut()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" /></svg></button>
         </div>
-      </main>
-    </>
+      </aside>
+
+      <section className="admin-work">
+        <header className="admin-work-head">
+          <div><p className="mono">V-EDT Admin</p><h1 className="disp">{view === "videos" ? "Videos" : "Niches"}</h1></div>
+          <button className="btn btn-acc" type="button" onClick={() => view === "videos" ? setEditor(blank(rows.length)) : void addCat()}>+ Add {view === "videos" ? "video" : "niche"}</button>
+        </header>
+        {msg && !editor ? <p className={`admin-status${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
+
+        {view === "niches" ? (
+          <div className="admin-list niches-list">
+            <div className="admin-list-head"><span>Order</span><span>Niche</span><span>Sub-groups</span><span>Actions</span></div>
+            {cats.map((c, i) => (
+              <div className="admin-list-row niche-row" key={c.id}>
+                <div className="order-controls"><button type="button" disabled={i === 0} onClick={() => void moveCat(i, -1)} aria-label={`Move ${c.label} up`}>↑</button><button type="button" disabled={i === cats.length - 1} onClick={() => void moveCat(i, 1)} aria-label={`Move ${c.label} down`}>↓</button></div>
+                <input defaultValue={c.label} aria-label={`${c.label} name`} onBlur={(e) => { const value = e.target.value.trim(); if (value && value !== c.label) void saveCat(c, { label: value }); }} />
+                <input defaultValue={(c.subs ?? []).join(", ")} aria-label={`${c.label} sub-groups`} placeholder="None" onBlur={(e) => { const subs = e.target.value.split(",").map((s) => s.trim()).filter(Boolean); if (subs.join("|") !== (c.subs ?? []).join("|")) void saveCat(c, { subs }); }} />
+                <button className="rowbtn danger" type="button" onClick={() => void delCat(c)}>Delete</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {editor ? (
+              <form className="editor" onSubmit={save}>
+                <div className="editor-head full"><h2>{editor.id ? "Edit video" : "Add video"}</h2><button type="button" className="rowbtn" onClick={() => setEditor(null)}>Close</button></div>
+                <label className="mono">Title<input value={editor.title} required onChange={(e) => set("title", e.target.value)} /></label>
+                <label className="mono">Niche<select value={editor.section} onChange={(e) => set("section", e.target.value)}>{(cats.length ? cats.map((c) => ({ id: c.slug, label: c.label })) : SECTIONS).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+                {subOptions.length ? <label className="mono">Sub-group<select value={editor.sub} onChange={(e) => set("sub", e.target.value)}><option value="">None</option>{subOptions.map((s) => <option key={s} value={s}>{s}</option>)}</select></label> : null}
+                <label className="mono">Shape<select value={editor.aspect} onChange={(e) => set("aspect", e.target.value as Aspect)}><option value="landscape">Wide</option><option value="portrait">Vertical</option><option value="4x5">4:5</option></select></label>
+                <label className="mono full">Video link<input value={editor.link} placeholder="YouTube, Instagram or Vimeo link" onChange={(e) => applyLink(e.target.value)} /><small>{editor.code ? `${editor.platform} link detected` : "Paste a link, or upload the file below."}</small></label>
+                <label className="mono full">Upload video<input type="file" accept="video/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) void upload(file); }} />{editor.file_path ? <small>File uploaded</small> : null}</label>
+                <button className="advanced-toggle full" type="button" onClick={() => setAdv((value) => !value)}>{adv ? "Hide advanced" : "Show advanced"}</button>
+                {adv ? <><label className="mono">Platform<select value={editor.platform} onChange={(e) => set("platform", e.target.value as Platform)}><option value="instagram">Instagram</option><option value="youtube">YouTube</option><option value="vimeo">Vimeo</option></select></label><label className="mono">Video ID<input value={editor.code} onChange={(e) => set("code", e.target.value)} /></label><label className="mono">Kind<input value={editor.kind} onChange={(e) => set("kind", e.target.value)} /></label><label className="mono">Thumbnail path<input value={editor.thumb} onChange={(e) => set("thumb", e.target.value)} /></label><label className="mono">Position<input type="number" value={editor.position} onChange={(e) => set("position", Number(e.target.value))} /></label></> : null}
+                <div className="editor-actions full"><button className="btn btn-acc" type="submit">{editor.id ? "Save changes" : "Add video"}</button><button className="btn btn-ghost" type="button" onClick={() => setEditor(null)}>Cancel</button></div>
+                {msg ? <p className={`msg full${msg.err ? " err" : ""}`}>{msg.text}</p> : null}
+              </form>
+            ) : null}
+            <div className="admin-list video-list">
+              <div className="admin-list-head"><span>Order</span><span>Video</span><span>Niche</span><span>Shape</span><span>Actions</span></div>
+              {rows.map((r, i) => (
+                <div className="admin-list-row video-row" key={r.id}>
+                  <div className="order-controls"><button type="button" disabled={i === 0} onClick={() => void move(i, -1)} aria-label={`Move ${r.title} up`}>↑</button><button type="button" disabled={i === rows.length - 1} onClick={() => void move(i, 1)} aria-label={`Move ${r.title} down`}>↓</button></div>
+                  <strong>{r.title}</strong><span>{r.section}{r.sub ? ` / ${r.sub}` : ""}</span><span>{r.aspect === "landscape" ? "Wide" : r.aspect === "portrait" ? "Vertical" : "4:5"}</span>
+                  <div className="row-actions"><button className="rowbtn" type="button" onClick={() => openEditor(r)}>Edit</button><button className="rowbtn danger" type="button" onClick={() => void remove(r.id)}>Delete</button></div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </main>
   );
 }
