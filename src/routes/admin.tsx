@@ -91,9 +91,149 @@ function Admin() {
       setSession(data.session);
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
     void load();
-    const openEditor = (r: Row) => {
+    return () => sub.subscription.unsubscribe();
+  }, [load]);
+
+  const login = async (event: FormEvent) => {
+    event.preventDefault();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setMsg(error ? { text: error.message, err: true } : { text: "Signed in.", err: false });
+  };
+
+  const createLogin = async () => {
+    if (!email || password.length < 6) {
+      setMsg({ text: "Enter your email and a password of at least 6 characters.", err: true });
+      return;
+    }
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setMsg({ text: error.message, err: true });
+      return;
+    }
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    setMsg(signInError
+      ? { text: "Account created. Confirm your email, then sign in.", err: false }
+      : { text: "Account created and signed in.", err: false });
+  };
+
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editor) return;
+    const payload = {
+      section: editor.section,
+      sub: editor.sub.trim() || null,
+      platform: editor.platform,
+      code: editor.code,
+      kind: editor.kind,
+      aspect: editor.aspect,
+      title: editor.title,
+      detail: editor.detail,
+      thumb: editor.thumb,
+      link: editor.link,
+      featured: editor.featured,
+      position: editor.position,
+      file_path: editor.file_path.trim() || null,
+    };
+    const query = editor.id
+      ? supabase.from("videos").update(payload).eq("id", editor.id)
+      : supabase.from("videos").insert(payload);
+    const { error } = await query;
+    if (error) {
+      setMsg({ text: `Save failed: ${error.message}`, err: true });
+      return;
+    }
+    setMsg({ text: editor.id ? "Updated." : "Added.", err: false });
+    setEditor(null);
+    await load();
+  };
+
+  const remove = async (id: string) => {
+    if (!window.confirm("Delete this video?")) return;
+    const { error } = await supabase.from("videos").delete().eq("id", id);
+    setMsg(error ? { text: `Delete failed: ${error.message}`, err: true } : { text: "Deleted.", err: false });
+    await load();
+  };
+
+  const move = async (index: number, direction: -1 | 1) => {
+    const current = rows[index];
+    const neighbour = rows[index + direction];
+    if (!current || !neighbour) return;
+    const first = await supabase.from("videos").update({ position: neighbour.position }).eq("id", current.id);
+    const second = await supabase.from("videos").update({ position: current.position }).eq("id", neighbour.id);
+    const error = first.error ?? second.error;
+    if (error) setMsg({ text: `Reorder failed: ${error.message}`, err: true });
+    await load();
+  };
+
+  const moveCat = async (index: number, direction: -1 | 1) => {
+    const current = cats[index];
+    const neighbour = cats[index + direction];
+    if (!current || !neighbour) return;
+    const first = await supabase.from("categories").update({ position: neighbour.position }).eq("id", current.id);
+    const second = await supabase.from("categories").update({ position: current.position }).eq("id", neighbour.id);
+    const error = first.error ?? second.error;
+    if (error) setMsg({ text: `Reorder failed: ${error.message}`, err: true });
+    await load();
+  };
+
+  const saveCat = async (category: Cat, patch: Partial<Cat>) => {
+    const { error } = await supabase.from("categories").update(patch).eq("id", category.id);
+    setMsg(error ? { text: `Niche save failed: ${error.message}`, err: true } : { text: "Niche updated.", err: false });
+    await load();
+  };
+
+  const addCat = async () => {
+    const label = window.prompt("New niche name")?.trim();
+    if (!label) return;
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const { error } = await supabase.from("categories").insert({ slug, label, subs: [], position: cats.length });
+    setMsg(error ? { text: `Add failed: ${error.message}`, err: true } : { text: `Added ${label}.`, err: false });
+    await load();
+  };
+
+  const delCat = async (category: Cat) => {
+    if (!window.confirm(`Remove the ${category.label} niche? Videos in it will remain stored.`)) return;
+    const { error } = await supabase.from("categories").delete().eq("id", category.id);
+    setMsg(error ? { text: `Delete failed: ${error.message}`, err: true } : { text: "Niche deleted.", err: false });
+    await load();
+  };
+
+  const set = <K extends keyof EditorState>(key: K, value: EditorState[K]) =>
+    setEditor((state) => state ? { ...state, [key]: value } : state);
+
+  const upload = async (file: File) => {
+    setMsg({ text: `Uploading ${file.name}…`, err: false });
+    const path = `videos/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+    const { error } = await supabase.storage.from("media").upload(path, file, { upsert: false });
+    if (error) {
+      setMsg({ text: `Upload failed: ${error.message}`, err: true });
+      return;
+    }
+    set("file_path", path);
+    setMsg({ text: "Uploaded. Save to apply.", err: false });
+  };
+
+  const subOptions = cats.find((category) => category.slug === editor?.section)?.subs
+    ?? SECTIONS.find((section) => section.id === editor?.section)?.subs
+    ?? [];
+
+  const applyLink = (raw: string) => {
+    const link = raw.trim();
+    let patch: Partial<EditorState> = { link };
+    const shorts = link.match(/youtube\.com\/shorts\/([\w-]+)/);
+    const youtube = link.match(/youtu\.be\/([\w-]+)/) ?? link.match(/youtube\.com\/(?:watch\?v=|embed\/)([\w-]+)/);
+    const instagram = link.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/);
+    const vimeo = link.match(/vimeo\.com\/(\d+)/);
+    if (shorts?.[1]) patch = { ...patch, platform: "youtube", code: shorts[1], kind: "shorts" };
+    else if (youtube?.[1]) patch = { ...patch, platform: "youtube", code: youtube[1], kind: "watch" };
+    else if (instagram?.[2] && instagram[1]) patch = { ...patch, platform: "instagram", code: instagram[2], kind: instagram[1] };
+    else if (vimeo?.[1]) patch = { ...patch, platform: "vimeo", code: vimeo[1], kind: "video" };
+    setEditor((state) => state ? { ...state, ...patch } : state);
+  };
+
+  const openEditor = (r: Row) => {
     setAdv(false);
     setEditor({
       id: r.id, section: r.section, sub: r.sub ?? "", platform: r.platform,
