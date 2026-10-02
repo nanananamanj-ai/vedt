@@ -596,10 +596,13 @@ export const SECTIONS: SectionMeta[] = [
 ];
 
 export const CONTACT = {
+  // wa.me opens the WhatsApp app on phones and WhatsApp Web on desktop.
   whatsapp:
-    "https://api.whatsapp.com/send?phone=919997100445&text=" +
-    encodeURIComponent("Hi V-EDT — I have a project in mind:"),
+    "https://wa.me/919997100445?text=" +
+    encodeURIComponent("Hi V-EDT, I have a project in mind:"),
   phoneDisplay: "+91 99971 00445",
   phoneTel: "tel:+919997100445",
   email: "v.edt.house@gmail.com",
+  instagram: "https://www.instagram.com/v.edt.house/",
+  instagramHandle: "@v.edt.house",
 };

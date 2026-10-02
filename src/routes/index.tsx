@@ -35,6 +35,22 @@ export const Route = createFileRoute("/")({
       { rel: "stylesheet", href: FONTS },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ProfessionalService",
+          name: "V-EDT",
+          description: DESCRIPTION,
+          url: "https://vedt.lovable.app/",
+          logo: "https://vedt.lovable.app/favicon.png",
+          email: "v.edt.house@gmail.com",
+          telephone: "+919997100445",
+          sameAs: ["https://www.instagram.com/v.edt.house/"],
+        }),
+      },
+    ],
   }),
   loader: async () => {
     const [videos, sections] = await Promise.all([loadVideos(), loadSections()]);
