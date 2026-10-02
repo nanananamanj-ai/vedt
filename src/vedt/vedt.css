@@ -163,6 +163,24 @@ section{scroll-margin-top:calc(var(--hdr) + 10px)}
 .ct-row .v{font-size:15px;color:var(--ink)}
 .ct-row a.v:hover{color:var(--acc);font-style:italic}
 .ct-back{display:inline-block;margin-top:34px}
+.ct-or{margin:46px 0 4px;color:var(--dim);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase}
+.cf{display:flex;flex-direction:column;gap:18px}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:560px){.cf-grid{grid-template-columns:1fr}}
+.cf-f{display:flex;flex-direction:column;gap:8px}
+.cf-f span{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.cf-f input,.cf-f select,.cf-f textarea{font:inherit;font-size:15px;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--line2);padding:8px 0;border-radius:0;outline:none;transition:border-color .18s}
+.cf-f textarea{resize:vertical;min-height:110px}
+.cf-f select option{color:#111}
+.cf-f input:focus,.cf-f select:focus,.cf-f textarea:focus{border-bottom-color:var(--acc)}
+.cf-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.cf-err{font-size:13px;color:var(--acc)}
+.cf-btn{align-self:flex-start;font:inherit;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);background:transparent;border:1px solid var(--ink);padding:14px 26px;cursor:pointer;transition:background .18s,color .18s}
+.cf-btn:hover:not(:disabled){background:var(--ink);color:var(--bg)}
+.cf-btn:disabled{opacity:.5;cursor:wait}
+.cf-done{padding:30px 0;border-bottom:1px solid var(--line2)}
+.cf-done-h{font-size:18px;color:var(--ink)}
+.cf-done-p{margin-top:6px;color:var(--mut);font-size:14px}
 
 /* ---------- admin ---------- */
 .adm{max-width:980px;margin:0 auto;padding:calc(var(--hdr) + 40px) 22px 90px}
