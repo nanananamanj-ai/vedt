@@ -24,4 +24,4 @@
 - [x] Remove showreel/featured strip; Travel first; admin reordering of niches
 - [x] SEO pass + sitemap.xml + robots.txt polish
 - [x] Simplify admin "add video" form (paste link → auto-detect platform/code/kind)
-- [ ] Redesign admin as a minimal left-panel workspace with Niches and Videos views
+- [x] Redesign admin as a minimal left-panel workspace with Niches and Videos views

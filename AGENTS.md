@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Project architecture
+
+- Keep `/admin` as a two-view editorial workspace: sidebar navigation for Videos/Niches and one focused management area, because this preserves the minimal reference-driven workflow.
